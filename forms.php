@@ -131,6 +131,13 @@ switch($_GET['action']) {
 			echo "<div class=breadcrumb><a href=\"index.php\">Home</a> &gt; ",_('Modify User Profile'),"</div>\n";
 		}
 		echo '<div id="headerforms" class="pagetitle"><h1>',_('User Profile'),'</h1></div>';
+
+		// include optional contents here
+		if (isset($CFG['GEN']['chguserinfo_extras'])) {
+			$prepend = '/' == substr($CFG['GEN']['chguserinfo_extras'], 0, 1) ? '' : $curdir;
+			require("$prepend/{$CFG['GEN']['chguserinfo_extras']}");
+		}
+
 		echo "<form id=\"pageform\" class=limitaftervalidate enctype=\"multipart/form-data\" method=post action=\"actions.php?action=chguserinfo$gb\">\n";
 		echo '<fieldset id="userinfoprofile"><legend>',_('Profile Settings'),'</legend>';
 		echo "<span class=form><label for=\"firstname\">",_('Enter First Name'),":</label></span> <input class=form type=text size=20 id=firstname name=firstname autocomplete=\"given-name\" value=\"".Sanitize::encodeStringForDisplay($line['FirstName'])."\" /><br class=\"form\" />\n";
