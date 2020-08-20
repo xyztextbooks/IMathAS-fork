@@ -93,6 +93,7 @@ function checkFormatAgainstRegex($val, $regexs) {
 }
 
 function sidIsAlreadyUsed($sid) {
+  global $DBH;
   $sid_value = Sanitize::stripHtmlTags($sid);
   $stm = $DBH->prepare('SELECT id FROM imas_users WHERE SID=:sid');
   $stm->execute(array(':sid'=>$sid_value));
@@ -100,11 +101,11 @@ function sidIsAlreadyUsed($sid) {
 }
 
 function checkNewUserValidation($required = array('SID','firstname','lastname','email','pw1','pw2')) {
-  global $loginformat, $CFG, $DBH;
+  global $loginformat, $loginprompt, $CFG, $DBH;
 
   // remove SID field from $required, if using emailAsSID
   if (isset($CFG['emailAsSID']) && ($req_sid_key = array_search('SID', $required)) !== false) {
-    unset($messages[$req_sid_key]);
+    unset($required[$req_sid_key]);
   }
 
   $errors = array();

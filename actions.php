@@ -115,34 +115,41 @@ require_once("includes/sanitize.php");
 			$_POST['courseid'] = Sanitize::courseId(trim($_POST['courseselect']));
 			$_POST['ekey'] = '';
 		}
-		if (!isset($_GET['confirmed'])) {
-			//look for existing account. ignore any LTI accounts
-			$stm = $DBH->prepare("SELECT SID FROM imas_users WHERE email=:email AND SID NOT LIKE 'lti-%'");
-			$stm->execute(array(':email'=>$_POST['email']));
-			if ($stm->rowCount()>0) {
-				$nologo = true;
-				require("header.php");
-				echo '<form method="post" action="actions.php?action=newuser&amp;confirmed=true'.$gb.'">';
-				echo '<input type="hidden" name="SID" value="'.Sanitize::encodeStringForDisplay($_POST['SID']).'" />';
-				echo '<input type="hidden" name="firstname" value="'.Sanitize::encodeStringForDisplay($_POST['firstname']).'" />';
-				echo '<input type="hidden" name="lastname" value="'.Sanitize::encodeStringForDisplay($_POST['lastname']).'" />';
-				echo '<input type="hidden" name="email" value="'.Sanitize::encodeStringForDisplay($_POST['email']).'" />';
-				echo '<input type="hidden" name="pw1" value="'.Sanitize::encodeStringForDisplay($_POST['pw1']).'" />';
-				echo '<input type="hidden" name="pw2" value="'.Sanitize::encodeStringForDisplay($_POST['pw2']).'" />';
-				echo '<input type="hidden" name="courseid" value="'.Sanitize::encodeStringForDisplay($_POST['courseid']).'" />';
-				echo '<input type="hidden" name="ekey" value="'.Sanitize::encodeStringForDisplay($_POST['ekey']).'" />';
-				$_SESSION['challenge'] = uniqid();
-				echo '<input type=hidden name=challenge value="'.Sanitize::encodeStringForDisplay($_SESSION['challenge']).'"/>';
-				if (isset($_POST['agree'])) {
-					echo '<input type="hidden" name="agree" value="1" />';
+
+		if (isset($CFG['emailAsSID'])) {
+			// set SID, if using emailAsSID
+			$_POST['SID'] = $_POST['email'];
+		} else {
+			// perform the usual email usage check
+			if (!isset($_GET['confirmed'])) {
+				//look for existing account. ignore any LTI accounts
+				$stm = $DBH->prepare("SELECT SID FROM imas_users WHERE email=:email AND SID NOT LIKE 'lti-%'");
+				$stm->execute(array(':email'=>$_POST['email']));
+				if ($stm->rowCount()>0) {
+					$nologo = true;
+					require("header.php");
+					echo '<form method="post" action="actions.php?action=newuser&amp;confirmed=true'.$gb.'">';
+					echo '<input type="hidden" name="SID" value="'.Sanitize::encodeStringForDisplay($_POST['SID']).'" />';
+					echo '<input type="hidden" name="firstname" value="'.Sanitize::encodeStringForDisplay($_POST['firstname']).'" />';
+					echo '<input type="hidden" name="lastname" value="'.Sanitize::encodeStringForDisplay($_POST['lastname']).'" />';
+					echo '<input type="hidden" name="email" value="'.Sanitize::encodeStringForDisplay($_POST['email']).'" />';
+					echo '<input type="hidden" name="pw1" value="'.Sanitize::encodeStringForDisplay($_POST['pw1']).'" />';
+					echo '<input type="hidden" name="pw2" value="'.Sanitize::encodeStringForDisplay($_POST['pw2']).'" />';
+					echo '<input type="hidden" name="courseid" value="'.Sanitize::encodeStringForDisplay($_POST['courseid']).'" />';
+					echo '<input type="hidden" name="ekey" value="'.Sanitize::encodeStringForDisplay($_POST['ekey']).'" />';
+					$_SESSION['challenge'] = uniqid();
+					echo '<input type=hidden name=challenge value="'.Sanitize::encodeStringForDisplay($_SESSION['challenge']).'"/>';
+					if (isset($_POST['agree'])) {
+						echo '<input type="hidden" name="agree" value="1" />';
+					}
+					echo '<p> </p>';
+					echo '<p>',_('It appears an account already exists with the same email address you just entered'),'. ';
+					echo sprintf(_('If you are creating an account because you forgot your username, you can %s look up your username %s instead.'),'<a href="forms.php?action=lookupusername">','</a>'),'</p>';
+					echo '<input type="submit" value="',_('Create new account anyways'),'"/>';
+					echo '</form>';
+					require("footer.php");
+					exit;
 				}
-				echo '<p> </p>';
-				echo '<p>',_('It appears an account already exists with the same email address you just entered'),'. ';
-				echo sprintf(_('If you are creating an account because you forgot your username, you can %s look up your username %s instead.'),'<a href="forms.php?action=lookupusername">','</a>'),'</p>';
-				echo '<input type="submit" value="',_('Create new account anyways'),'"/>';
-				echo '</form>';
-				require("footer.php");
-				exit;
 			}
 		}
 
