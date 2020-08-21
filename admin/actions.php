@@ -311,15 +311,30 @@ switch($_POST['action']) {
 		if ($_POST['newrights']>$myrights) {
 			$_POST['newrights'] = $myrights;
 		}
-		$stm = $DBH->prepare("SELECT id FROM imas_users WHERE SID=:SID");
-		$stm->execute(array(':SID'=>$_POST['SID']));
-		$row = $stm->fetch(PDO::FETCH_NUM);
-		if ($row != null) {
-			echo "<html><body>",_("Username is already used."),"\n";
-			echo "<a href=\"forms.php?action=newadmin\">",_("Try Again"),"</a> ",_("or")," ";
-			echo "<a href=\"forms.php?action=chgrights&id={$row[0]}\">",_("Change rights for existing user"),"</a></body></html>\n";
-			exit;
+
+		if (isset($CFG['emailAsSID'])) {
+			// set SID, if using emailAsSID
+			$_POST['SID'] = Sanitize::emailAddress($_POST['email']);
+			// make sure SID is not already in use
+			require_once("../includes/newusercommon.php");
+			if (sidIsAlreadyUsed($_POST['SID'])) {
+				echo "<html><body>",_("The email you entered is already in use."),"\n";
+				echo "<a href=\"forms.php?action=newadmin\">",_("Try Again"),"</a>";
+				exit;
+			}
+		} else {
+			// SID is already in the post array. Perform the usual usage check
+			$stm = $DBH->prepare("SELECT id FROM imas_users WHERE SID=:SID");
+			$stm->execute(array(':SID'=>$_POST['SID']));
+			$row = $stm->fetch(PDO::FETCH_NUM);
+			if ($row != null) {
+				echo "<html><body>",_("Username is already used."),"\n";
+				echo "<a href=\"forms.php?action=newadmin\">",_("Try Again"),"</a> ",_("or")," ";
+				echo "<a href=\"forms.php?action=chgrights&id={$row[0]}\">",_("Change rights for existing user"),"</a></body></html>\n";
+				exit;
+			}
 		}
+
 		if (isset($CFG['GEN']['newpasswords'])) {
 			$md5pw = password_hash($_POST['pw1'], PASSWORD_DEFAULT);
 		} else {
