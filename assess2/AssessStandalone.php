@@ -52,14 +52,32 @@ class AssessStandalone {
    *  $arr['seeds'] = array of qn=>seed
    *  $arr['qsid'] = array of qn=>qsetid
    *  $arr['stuanswers'] = stuanswers for all questions, (qn+1)-indexed
-   *  $arr['stuanswerval'] = stuanswersval for all questions, (qn+1)-indexed
+   *  $arr['stuanswersval'] = stuanswersval for all questions, (qn+1)-indexed
    *  $arr['scorenonzero'] = scorenonzero for all questions, (qn+1)-indexed
    *  $arr['scoreiscorrect'] = scoreiscorrect for all questions, (qn+1)-indexed
    *  $arr['partattemptn'] = array of qn=>pn=>num of attempts made
    *  $arr['rawscores'] = array of qn=>pn=>rawscores
+   *  $arr['wrongfmt'] = array of qn=>pn=>wrongfmt
    */
   function setState($arr) {
-    $this->state = $arr;
+      foreach (['stuanswers','stuanswersval','scorenonzero','scoreiscorrect','partattemptn','rawscore'] as $f) {
+          if (!isset($arr[$f])) {
+              $arr[$f] = [];
+          }
+      }
+      foreach ($arr['seeds'] as $qn=>$seed) {
+        foreach (['scorenonzero','scoreiscorrect'] as $f) {
+            if (!isset($arr[$f][$qn+1])) {
+                $arr[$f][$qn+1] = false;
+            }
+        }
+        foreach (['partattemptn','rawscore'] as $f) {
+            if (!isset($arr[$f][$qn])) {
+                $arr[$f][$qn] = [];
+            }
+        }
+      }
+      $this->state = $arr;
   }
 
   /*
@@ -151,6 +169,12 @@ class AssessStandalone {
     // showans is show-for-all override
     // showansparts is per-part show ans
 
+    $correctAnswerWrongFormat = array();
+    if (!empty($this->state['wrongfmt'][$qn])) {
+        foreach ($this->state['wrongfmt'][$qn] as $pn=>$v) {
+            $correctAnswerWrongFormat[$pn] = ($v>0);
+        }
+    }
     $questionParams = new QuestionParams();
     $questionParams
         ->setDbQuestionSetId($qsid)
@@ -170,7 +194,12 @@ class AssessStandalone {
         ->setScoreNonZero($this->state['scorenonzero'])
         ->setScoreIsCorrect($this->state['scoreiscorrect'])
         ->setLastRawScores($rawscores)
-        ->setSeqPartDone($seqPartDone);;
+        ->setSeqPartDone($seqPartDone)
+        ->setCorrectAnswerWrongFormat($correctAnswerWrongFormat);
+
+    if (!empty($options['printformat'])) {
+        $questionParams->setPrintFormat(true);
+    }
 
     $questionGenerator = new QuestionGenerator($this->DBH,
         $GLOBALS['RND'], $questionParams);
@@ -186,12 +215,10 @@ class AssessStandalone {
 
     $answeights = $question->getAnswerPartWeights();
 
-    /*  Not needed
-    if ($showans) {
+    if (!empty($options['includeans'])) {
       $jsparams['ans'] = $question->getCorrectAnswersForParts();
       $jsparams['stuans'] = $stuanswers[$qn+1];
     }
-    */
 
     if ($maxtries > 0) {
       $disabled = array();
@@ -269,6 +296,17 @@ class AssessStandalone {
         } else {
           $this->state['stuanswers'][$qn+1] = $v;
           $this->state['stuanswersval'][$qn+1] = $partlaNum[$k];
+        }
+        if (!empty($scoreResult['correctAnswerWrongFormat'][$k])) {
+            if (!isset($this->state['wrongfmt'])) {
+                $this->state['wrongfmt'] = array();
+            }
+            if (!isset($this->state['wrongfmt'][$qn])) {
+                $this->state['wrongfmt'][$qn] = array();
+            }
+            $this->state['wrongfmt'][$qn][$k] = 1;
+        } else if (!empty($this->state['wrongfmt'][$qn][$k])) {
+            unset($this->state['wrongfmt'][$qn][$k]);
         }
       }
       if ($parts_to_score === true || !empty($parts_to_score[$k]) ||

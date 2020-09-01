@@ -379,7 +379,9 @@ $vueData = array(
 						<option value="DNC"><?php echo _('Do not change'); ?></option>
 						<option value="0"><?php echo _('No'); ?></option>
 						<option value="1"><?php echo _('All'); ?></option>
-						<option value="16"><?php echo _('All but first'); ?></option>
+                        <option value="16"><?php echo _('All but first'); ?></option>
+                        <option value="32"><?php echo _('All but last');?></option>
+                        <option value="48"><?php echo _('All but first and last');?></option>
 					</select>
 				</span><br class=form />
 			</div>
@@ -814,6 +816,10 @@ var app = new Vue({
 					{
 						'value': 'after_lastattempt',
 						'text': '<?php echo _('After the last try on a question'); ?>'
+                    },
+                    {
+						'value': 'jump_to_answer',
+						'text': '<?php echo _('After the last try or Jump to Answer button');?>'
 					},
 					never
 				];

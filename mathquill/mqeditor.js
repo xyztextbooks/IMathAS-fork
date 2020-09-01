@@ -83,7 +83,7 @@ var MQeditor = (function($) {
           text: initval
         });
         var m;
-        if ((m = el.className.match(/(ansred|ansyel|ansgrn)/)) !== null) {
+        if ((m = el.className.match(/(ansred|ansyel|ansgrn|ansorg)/)) !== null) {
           span.addClass(m[0]);
         }
         var size = (el.hasAttribute("size") ? (el.size > 3 ? el.size/1.8 : el.size) : 10);
@@ -110,6 +110,17 @@ var MQeditor = (function($) {
             return s;
           };
           thisMQconfig.keyboardPassthrough = true;
+        }
+        var vars = el.getAttribute("data-mq-vars") || '';
+        if (vars != '') {
+            thisMQconfig.autoOperatorNames = thisMQconfig.autoParenOperators = 
+                'ln log abs exp sin cos tan arcsin arccos arctan sec csc cot arcsec arccsc arccot sinh cosh sech csch tanh coth arcsinh arccosh arctanh';
+            vars = (vars=='') ? [] : vars.split(/,/);
+            for (var i=0; i<vars.length; i++) {
+                if (vars[i].length > 1 && vars[i].match(/^[a-zA-Z]+$/)) {
+                    thisMQconfig.autoOperatorNames += ' ' + vars[i];
+                }
+            }
         }
 
         if (el.disabled) {

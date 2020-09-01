@@ -246,14 +246,14 @@ tr {
 	margin: 0px;
 	padding: 0px;
 }
-th[aria-sort]:after {
+th[aria-sort] > *:last-child:after {
 	color: #666;
-	padding-left: 2px;
+    padding-left: 2px;
 }
-th[aria-sort="ascending"]:after {
+th[aria-sort="ascending"] > *:last-child:after {
 	content: "\2191";
 }
-th[aria-sort="descending"]:after {
+th[aria-sort="descending"] > *:last-child:after {
 	content: "\2193";
 }
 td.c, input.c {
@@ -357,6 +357,12 @@ span.left {
 	height: 1px;
 	overflow: hidden;
 	color: transparent;
+}
+.empty-state, ul:empty {
+    display: none;
+}
+ul:empty + .empty-state {
+    display: block;
 }
 #skipnav:focus, #skipnav:active {
     position: static;
@@ -1363,3 +1369,5 @@ a.dropdown-toggle.arrow-down:hover {
 	max-width: 1920px;
 	margin: auto;
 }
+
+[tabindex="-1"] { outline: none }

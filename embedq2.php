@@ -3,6 +3,10 @@
 // embedq2.php: Embed one question via an iframe
 // Operates without requiring login
 // Can passback results to embedding page
+//
+// See https://github.com/drlippman/IMathAS-Extras/tree/master/embedq 
+// for documentation and examples
+//
 // (c) 2020 David Lippman
 
 $init_skip_csrfp = true;
@@ -284,10 +288,10 @@ if (!empty($CFG['assess2-use-vue-dev'])) {
     $placeinhead .= '<script src="' . $imasroot . '/mathquill/mqeditor.js?v=041920" type="text/javascript"></script>';
     $placeinhead .= '<script src="' . $imasroot . '/mathquill/mqedlayout.js?v=041920" type="text/javascript"></script>';
 } else {
-    $placeinhead .= '<script src="' . $imasroot . '/javascript/assess2_min.js?v=080420" type="text/javascript"></script>';
+    $placeinhead .= '<script src="' . $imasroot . '/javascript/assess2_min.js?v=082020" type="text/javascript"></script>';
 }
 
-$placeinhead .= '<script src="' . $imasroot . '/javascript/assess2supp.js" type="text/javascript"></script>';
+$placeinhead .= '<script src="' . $imasroot . '/javascript/assess2supp.js?v=082020" type="text/javascript"></script>';
 $placeinhead .= '<link rel="stylesheet" type="text/css" href="' . $imasroot . '/mathquill/mathquill-basic.css">
   <link rel="stylesheet" type="text/css" href="' . $imasroot . '/mathquill/mqeditor.css">';
 
