@@ -47,6 +47,11 @@ switch($_POST['action']) {
 		$_SESSION['userid'] = $be;
 		break;
 	case "chgrights":
+		if (isset($CFG['emailAsSID'])) {
+			// set SID, if using emailAsSID
+			$_POST['SID'] = $_POST['email'];
+		}
+
 		if ($myrights < 75 && ($myspecialrights&16)!=16 && ($myspecialrights&32)!=32) {
 			echo _("You don't have the authority for this action");
 			break;
