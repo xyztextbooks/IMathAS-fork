@@ -482,24 +482,24 @@ switch($_GET['action']) {
 			echo "<div class=breadcrumb><a href=\"index.php\">Home</a> &gt; ",_('Username Lookup'),"</div>\n";
 		}
 		if (isset($CFG['emailAsSID'])) {
-			// just show a message
+			// just show a message when using emailAsSID
 			echo "<p>Your login username is the email address you entered when you registered with " . $installname . ".</p>";
 			echo "<p><a href=\"index.php\">Return to Login</a></p>";
 		} else {
-        		echo '<div id="headerforms" class="pagetitle"><h1>',_('Lookup Username'),'</h1></div>';
-        		echo "<form id=\"pageform\" method=post action=\"actions.php?action=lookupusername$gb\">\n";
-        		echo _("If you can't remember your username, enter your email address below.  An email will be sent to your email address with your username. ");
-        		echo "<p><label for=email>",_('Email'),"</label>: <input type=text name=\"email\" id=email /></p>";
-        		echo '<script type="text/javascript">
-        		$("#pageform").validate({
-        			rules: {
-        				email: { required: true, email: true}
-        			},
-        			invalidHandler: function() {setTimeout(function(){$("#pageform").removeClass("submitted").removeClass("submitted2");}, 100)}}
-        		);
-        		</script>';
-        		echo "<p><input type=submit value=\"",_('Submit'),"\" /></p>";
-        		echo "</form>";
+    		echo '<div id="headerforms" class="pagetitle"><h1>',_('Lookup Username'),'</h1></div>';
+    		echo "<form id=\"pageform\" method=post action=\"actions.php?action=lookupusername$gb\">\n";
+    		echo _("If you can't remember your username, enter your email address below.  An email will be sent to your email address with your username. ");
+    		echo "<p><label for=email>",_('Email'),"</label>: <input type=text name=\"email\" id=email /></p>";
+    		echo '<script type="text/javascript">
+    		$("#pageform").validate({
+    			rules: {
+    				email: { required: true, email: true}
+    			},
+    			invalidHandler: function() {setTimeout(function(){$("#pageform").removeClass("submitted").removeClass("submitted2");}, 100)}}
+    		);
+    		</script>';
+    		echo "<p><input type=submit value=\"",_('Submit'),"\" /></p>";
+    		echo "</form>";
 		}
 		break;
 	case "forumwidgetsettings":

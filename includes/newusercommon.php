@@ -125,17 +125,17 @@ function checkNewUserValidation($required = array('SID','firstname','lastname','
     }
   }
 	if (in_array('email',$required)) {
-		//if (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/',$_POST['email']) ||
-		if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) ||
+	  //if (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/',$_POST['email']) ||
+	  if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) ||
 	    (isset($CFG['acct']['emailFormat']) && !checkFormatAgainstRegex($_POST['email'], $CFG['acct']['emailFormat']))) {
 	    $errors[] = "Invalid email address.";
 	  }
-		if (isset($CFG['emailAsSID'])) {
-			// perform additional validation of email to insure it is not an alread-registered SID, if using emailAsSID
-			if (sidIsAlreadyUsed($_POST['email'])) {
-				$errors[] =  "$loginprompt '" . Sanitize::encodeStringForDisplay($sid_value) . "' is already used. ";
-			}
-		}
+	  if (isset($CFG['emailAsSID'])) {
+        // perform additional validation of email to insure it is not an alread-registered SID, if using emailAsSID
+		  if (sidIsAlreadyUsed($_POST['email'])) {
+            $errors[] =  "$loginprompt '" . Sanitize::encodeStringForDisplay($sid_value) . "' is already used. ";
+          }
+      }
 	}
 	if (in_array('pw1',$required)) {
 	  if (isset($CFG['acct']['passwordFormat']) && !checkFormatAgainstRegex($_POST['pw1'], $CFG['acct']['passwordFormat'])) {
