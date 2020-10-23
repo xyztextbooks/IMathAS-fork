@@ -215,16 +215,19 @@ if (!isset($teacherid)) { // loaded by a NON-teacher
 
 		if (isset($_POST['timelimitmult'])) {
 			$msgout = '';
-			if (isset($_POST['SID'])) {
+			if (isset($_POST['SID']) || isset($_POST['OrigEmailForEmailAsSid'])) {
+				if (isset($CFG['emailAsSID'])) {
+					// deal with SID later in email-related code, if using emailAsSID
+					$updateusername = false;
+				} else {
 				if (checkFormatAgainstRegex($_POST['SID'], $loginformat)) {
 					$un = $_POST['SID'];
 					$updateusername = true;
 				} else {
 					$updateusername = false;
 				}
-				$stm = $DBH->prepare("SELECT id FROM imas_users WHERE SID=:SID");
-				$stm->execute(array(':SID'=>$un));
-				if ($stm->rowCount()>0) {
+					// make sure SID is not already used
+					if (sidIsAlreadyUsed($_POST['SID'])) {
 					$updateusername = false;
 				}
 				if ($updateusername) {
@@ -232,19 +235,34 @@ if (!isset($teacherid)) { // loaded by a NON-teacher
 				} else {
 					$msgout .= '<p>Username left unchanged</p>';
 				}
+				}
 				$query = "UPDATE imas_users SET FirstName=:FirstName,LastName=:LastName";
-
 				$qarr = array(':FirstName'=>$_POST['firstname'], ':LastName'=>$_POST['lastname']);
 				if ($updateusername) {
 					$query .= ",SID=:SID";
 					$qarr[':SID'] = $un;
 				}
-				if (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/',$_POST['email']) ||
-				(isset($CFG['acct']['emailFormat']) && !checkFormatAgainstRegex($_POST['email'], $CFG['acct']['emailFormat']))) {
-				$msgout .= '<p>Invalid email address - left unchanged</p>';
-			  } else {
-					$query .= ",email=:email";
-					$qarr[':email'] = $_POST['email'];
+				//if (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/',$_POST['email'])
+				if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) || (isset($CFG['acct']['emailFormat']) && !checkFormatAgainstRegex($_POST['email'], $CFG['acct']['emailFormat']))) {
+        				$msgout .= '<p>Invalid email address - left unchanged</p>';
+        			} else {
+					if (isset($CFG['emailAsSID'])) {
+        					// perform additional validation of email to insure it is not an alread-registered SID, if using emailAsSID
+        					$email_was_changed = $_POST['OrigEmailForEmailAsSid'] != $_POST['email'];
+        					if ($email_was_changed && sidIsAlreadyUsed($_POST['email'])) {
+        						$msgout .= '<p>email address already in use - left unchanged</p>';
+        					} else {
+        						// set SID and email to same value
+        						$query .= ",SID=:SID";
+        						$qarr[':SID'] = $_POST['email'];
+  
+                					$query .= ",email=:email";
+                					$qarr[':email'] = $_POST['email'];
+                				}
+					} else {
+						$query .= ",email=:email";
+						$qarr[':email'] = $_POST['email'];
+					}
 				}
 				if (isset($_POST['doresetpw'])) {
 					if (isset($CFG['acct']['passwordFormat']) && !checkFormatAgainstRegex($_POST['pw1'], $CFG['acct']['passwordFormat'])) {
@@ -267,7 +285,11 @@ if (!isset($teacherid)) { // loaded by a NON-teacher
 				$stm = $DBH->prepare($query);
 				$stm->execute($qarr);
 			} else {
-				$msgout = '<p>Username, name, email, and password left unchanged.</p>';
+				if (isset($CFG['emailAsSID'])) {
+					$msgout = '<p>Name, email, and password left unchanged.</p>';
+				} else {
+        				$msgout = '<p>Username, name, email, and password left unchanged.</p>';
+            			}
 			}
 			$code = $_POST['code'];
 			$section = $_POST['section'];
@@ -595,8 +617,15 @@ if ($overwriteBody==1) {
 		}
 ?>
 		<form enctype="multipart/form-data" id=pageform method=post action="listusers.php?cid=<?php echo $cid ?>&chgstuinfo=true&uid=<?php echo Sanitize::onlyInt($_GET['uid']) ?>" class="limitaftervalidate"/>
-			<span class=form><label for="SID">User Name (login name):</label></span>
-			<input <?php echo $disabled;?> class=form type=text size=20 id=SID name=SID value="<?php echo Sanitize::encodeStringForDisplay($lineStudent['SID']); ?>"/><br class=form>
+			<?php if (isset($CFG['emailAsSID'])) { ?>
+				<?php // create a dummy field, when using emailAsSID ?>
+				<?php if (!$disabled) { ?>
+					<input type="hidden" id="OrigEmailForEmailAsSid" name="OrigEmailForEmailAsSid" value="<?php echo Sanitize::encodeStringForDisplay($lineStudent['email']); ?>" />
+				<?php } ?>
+			<?php } else { ?>
+        			<span class=form><label for="SID">User Name (login name):</label></span>
+        			<input <?php echo $disabled;?> class=form type=text size=20 id=SID name=SID value="<?php echo Sanitize::encodeStringForDisplay($lineStudent['SID']); ?>"/><br class=form>
+			<?php } ?>
 			<span class=form><label for="firstname">First Name:</label></span>
 			<input <?php echo $disabled;?> class=form type=text size=20 id=firstname name=firstname value="<?php echo Sanitize::encodeStringForDisplay($lineStudent['FirstName']); ?>"/><br class=form>
 			<span class=form><label for="lastname">Last Name:</label></span>
