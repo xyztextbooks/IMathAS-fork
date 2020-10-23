@@ -49,7 +49,7 @@ switch($_POST['action']) {
 	case "chgrights":
 		if (isset($CFG['emailAsSID'])) {
 			// set SID, if using emailAsSID
-			$_POST['SID'] = $_POST['email'];
+			$_POST['SID'] = Sanitize::emailAddress($_POST['email']);
 		}
 
 		if ($myrights < 75 && ($myspecialrights&16)!=16 && ($myspecialrights&32)!=32) {
@@ -70,12 +70,19 @@ switch($_POST['action']) {
 			exit;
 		}
 
-		$stm = $DBH->prepare("SELECT id FROM imas_users WHERE SID=:SID");
-		$stm->execute(array(':SID'=>Sanitize::stripHtmlTags($_POST['SID'])));
-		$row = $stm->fetch(PDO::FETCH_NUM);
-		$chgSID = true;
-		if ($row != null) {
-			$chgSID = false;
+		if (isset($CFG['emailAsSID'])) {
+			// make sure SID is not already in use
+			require_once("../includes/newusercommon.php");
+			$chgSID = sidIsAlreadyUsed($_POST['SID']) ? false : true;
+		} else {
+			// Perform the usual usage check
+			$stm = $DBH->prepare("SELECT id FROM imas_users WHERE SID=:SID");
+			$stm->execute(array(':SID'=>Sanitize::stripHtmlTags($_POST['SID'])));
+			$row = $stm->fetch(PDO::FETCH_NUM);
+			$chgSID = true;
+			if ($row != null) {
+				$chgSID = false;
+			}
 		}
 
 		$specialrights = 0;
@@ -212,7 +219,11 @@ switch($_POST['action']) {
 		}
 
 		if ($chgSID==false && $row[0]!=$_GET['id']) {
-			echo "Username in use - left unchanged";
+			if (isset($CFG['emailAsSID'])) {
+				echo "Email in use - left unchanged";
+			} else {
+				echo "Username in use - left unchanged";
+			}
 			exit;
 		}
 
