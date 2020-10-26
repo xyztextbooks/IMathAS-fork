@@ -118,8 +118,15 @@ switch($_POST['action']) {
 
 		$arr = array(':rights'=>$_POST['newrights'], ':specialrights'=>$specialrights, ':id'=>$_GET['id'],
 				':FirstName'=>Sanitize::stripHtmlTags($_POST['firstname']),
-				':LastName'=>Sanitize::stripHtmlTags($_POST['lastname']),
-				':email'=>Sanitize::stripHtmlTags($_POST['email']));
+				':LastName'=>Sanitize::stripHtmlTags($_POST['lastname']));
+		// when using emailAsSID, update email field only when $chgSID is true
+		if (isset($CFG['emailAsSID'])) {
+			if ($chgSID) {
+				$arr[':email'] = Sanitize::stripHtmlTags($_POST['email']);
+			}
+		} else {
+			$arr[':email'] = Sanitize::stripHtmlTags($_POST['email']);
+		}
 		if ($chgSID) {
 			$arr[':SID'] = Sanitize::stripHtmlTags($_POST['SID']);
 		}
@@ -148,7 +155,16 @@ switch($_POST['action']) {
 			}
 			$arr[':groupid'] = $newgroup;
 
-			$query = "UPDATE imas_users SET rights=:rights,specialrights=:specialrights,groupid=:groupid,FirstName=:FirstName,LastName=:LastName,email=:email";
+			$query = "UPDATE imas_users SET rights=:rights,specialrights=:specialrights,groupid=:groupid,FirstName=:FirstName,LastName=:LastName";
+
+			// when using emailAsSID, update email field only when $chgSID is true
+			if (isset($CFG['emailAsSID'])) {
+				if ($chgSID) {
+					$query .= ',email=:email';
+				}
+			} else {
+				$query .= ',email=:email';
+			}
 			if ($chgSID) {
 				$query .= ',SID=:SID';
 			}
@@ -164,7 +180,16 @@ switch($_POST['action']) {
 			$newgroup = $groupid;
 			$arr[':groupid'] = $groupid;
 
-			$query = "UPDATE imas_users SET rights=:rights,specialrights=:specialrights,FirstName=:FirstName,LastName=:LastName,email=:email";
+			$query = "UPDATE imas_users SET rights=:rights,specialrights=:specialrights,FirstName=:FirstName,LastName=:LastName";
+
+			// when using emailAsSID, update email field only when $chgSID is true
+			if (isset($CFG['emailAsSID'])) {
+				if ($chgSID) {
+					$query .= ',email=:email';
+				}
+			} else {
+				$query .= ',email=:email';
+			}
 			if ($chgSID) {
 				$query .= ',SID=:SID';
 			}
