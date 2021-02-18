@@ -2195,6 +2195,7 @@ for ($i=1..5) {$a = $a+$i} if ($a>2)     DOES NOT WORK
 <p>Note on macros:  The descriptions below explain macros available and the arguments the
 functions should be called with.  Arguments in [square brackets] are optional arguments, and
 can be omitted.</p>
+<p>For all randomizers, all bounds (min,max) are inclusive.</p>
 
 <p>Single result randomizers:</p>
 <ul>
@@ -2260,7 +2261,7 @@ The following macros create graphs or tables:
 		<li><strong>color</strong>: a color designator: black,red,orange,yellow,green,blue,purple</li>
 		<li><strong>min,max</strong>: the min and max values for the input variable for which you wish to see this graph.  You can also exclude
 		    point discontinuities; for example -5,5!0!2 for min,max would include all values from -5 to 5, excluding 0 and 2.</li>
-		<li><strong>startmarker,endmarker</strong>: can be "open" or "closed" (dots), or anything else for none</li>
+		<li><strong>startmarker,endmarker</strong>: can be "open" or "closed" (dots), "arrow", or anything else for none</li>
 		<li><strong>width</strong>: a pixel width for the line</li>
 		<li><strong>dash</strong>: enter "dash" if you want a dashed line, otherwise the line is solid</li>
 		<li><strong>Examples</strong>: "cos(x),red" or "x^2,,-2,2,open,closed" or "[t^2,t/3],blue,0,5,,,2,dash" or "1/x,black,-5,5!0" or "x=1,red,,,,,,dash"</li>
@@ -2335,29 +2336,31 @@ The following macros create graphs or tables:
     image.  Specify the text string, and offset in pixels from the top left corner.  Can specify multiple strings to overlay.
     textonimage is not screenreader-friendly, so it's recommended you provide an alt text on the image, 
     which will be read to the screenreader instead of the image and any layered text.</li>
+<li><strong>addimageborder(image, [border width, margin])</strong>: Adds a border to an image uploaded in 
+    the question editor. Border width (default 1) and whitespace margin (default 0) can be specified.</li>
 <li><strong>arraystodoteqns(xarray,yarray,[color])</strong>:  Converts an array of x-values and y-values into a form that can be used in
   showplot.</li>
 <li><strong>connectthedots(xarray,yarray,[color,thickness,startmarker,endmarker])</strong>: Converts an array of x-values and y-values into a form that
   can be used in showplot to create a series of lines connecting the (x,y) pairs</li>
 <li><strong>arraystodots(xarray,yarray)</strong>: Converts an array of x-values and y-values into a form that can be used in the Drawing answer type</li>
-<li><strong>gettwopointlinedata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height]) or gettwopointlinedata(stuans, [grid])</strong>:  Takes a $stuanswers from a drawing
+<li><strong>gettwopointlinedata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height]) or gettwopointlinedata(stuans, [grid, snaptogrid])</strong>:  Takes a $stuanswers from a drawing
   question and pulls out the two-point line data.  Returns an array of lines, each of form array(x1,y1,x2,y2) giving the coordinates
   of the two points used.</li>
-<li><strong>gettwopointdata(stuans, type, [xmin, xmax, ymin, ymax, drawing width, drawing height]) or gettwopointdata(stuans, type, [grid])</strong>:  Takes a $stuanswers from a drawing question
+<li><strong>gettwopointdata(stuans, type, [xmin, xmax, ymin, ymax, drawing width, drawing height]) or gettwopointdata(stuans, type, [grid, snaptogrid])</strong>:  Takes a $stuanswers from a drawing question
   and pulls out the two-point data for the given curve type.  Type should be one of 'line', 'lineseg', 'ray', 'parab', 'horizparab', 'sqrt', 'cubic', 'cuberoot',
   'rationa', 'exp', 'log', 'sin', 'cos', 'abs', 'vector', 'circle'.  Returns an array of curve data, each of form array(x1,y1,x2,y2) giving the coordinates of
   the two points used.  They are returned in the order clicked.  For example, with 'parab' type, the first point is the vertex and the
   second point is an arbitrary point.</li>
-<li><strong>getdotsdata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height])</strong>:  Takes a $stuanswers from a drawing
+<li><strong>getdotsdata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height]) or getdotsdata(stuans, [grid, snaptogrid])</strong>:  Takes a $stuanswers from a drawing
   question and pulls out the closed dots data.  Returns an array of dots, each of form array(x1,y1) giving the coordinates
   of the dot.</li>
-<li><strong>getopendotsdata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height])</strong>:  Takes a $stuanswers from a drawing
+<li><strong>getopendotsdata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height]) or getopendotsdata(stuans, [grid, snaptogrid])</strong>:  Takes a $stuanswers from a drawing
   question and pulls out the open dots data.  Returns an array of dots, each of form array(x1,y1) giving the coordinates
   of the dot.</li>
-<li><strong>getlinesdata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height])</strong>:  Takes a $stuanswers from a drawing
+<li><strong>getlinesdata(stuans, [xmin, xmax, ymin, ymax, drawing width, drawing height]) or getlinesdata(stuans, [grid, snaptogrid])</strong>:  Takes a $stuanswers from a drawing
   question and pulls out the lines data, which includes polygons.  Returns an array, with an element for each line/curve draw.  Each of those
   elements will be an array of points on that line/curve.  Each of those points is array (x,y).</li>
-<li><strong>getineqdata(stuans, [type, xmin, xmax, ymin, ymax, drawing width, drawing height])</strong>:  Takes a $stuanswers from a drawing question
+<li><strong>getineqdata(stuans, [type, xmin, xmax, ymin, ymax, drawing width, drawing height]) or getineqdata(stuans, [grid, snaptogrid])</strong>:  Takes a $stuanswers from a drawing question
   and pulls out the inequalities data for the given curve type.  Type should be one of 'linear' or 'quadratic'.
 	Returns an array of curve data, each of form array(style,x1,y1,x2,y2,x3,y3) giving the coordinates of
   the three points used.  They are returned in the order clicked.  style will be either 'ne' for strict inequality (dashed line),
@@ -2759,8 +2762,16 @@ $hints[question part number][attempt number] = "hint text"
 Then in question text, place each hint using $hintloc[question part number]
 </p>
 <p>
+To have the hint to display based on a set of previous answers, you can use:
+</p>
+<pre>
+$hints[question part number][attempt number] = array("hint text", [part num1, part num 2])
+</pre>
+<p>This will display the hint after all the parts listed have had the required attempts or are correct.</p>
+<p>
 To override the default <em>Hint:</em> text, set $hintlabel.
 </p>
+
 
 <h3>Help references</h3>
 <p>To provide help of some sort for a question (typically, links to videos, book references, etc), define $helptext
@@ -2987,7 +2998,11 @@ A student is asked to enter a number or a calculation, like 2/3, 5^2, or sin(2).
         <li>allowmixed: will enable support for mixed numbers (like 2 1/2) in answers</li>
         <li>allowdegrees: will enable the use of the degree symbol to designate degrees, so sin(30degree)=1/2.</li>
 		<li>noval: tells the answer preview to not compute a decimal equivalent (deprecated - this option is now enabled by default)</li>
-		<li>showval: tells the answer preview to display a decimal equivalent</li>
+        <li>showval: tells the answer preview to display a decimal equivalent</li>
+        <li>sameform: requires the student's answer be in the "same form" as the correct answer. This means 
+            exactly the same, except for commutation of addition and multiplication, multiplication by 1,
+            implicit multiplication, and extra parentheses. Use with caution.</li>
+        </li>
 		</ul></li>
 	<li>List options: only use at most one of these at a time
 		<ul>
@@ -3226,7 +3241,7 @@ A student is asked to enter a function
 	Include "ignore_case,false" to make the search case sensitive.
 	Include "ignore_symbol,$" (or some symbol other than $) at the beginning of the $requiretimes to ignore that symbol in the answer<br/>
 	Note that commas are ignored by default with Function type, and a basic exponent like x^(-3) is converted to x^-3 before the check.</dd>
-<dt>$answerformat = "equation" or "inequality" or "toconst" or "nosoln" or "nosolninf" (can combine, like "equation,nosoln")</dt>
+<dt>$answerformat = "equation" or "inequality" or "toconst" or "scalarmult" or "nosoln" or "nosolninf" or "sameform" (can combine, like "equation,nosoln")</dt>
 	<dd>By default, the student answer is expected to be an expression, and be equivalent (at points) to the specified answer.  This option changes
 	this behavior.<br/>
 	"equation": Specifies that the answer expected is an equation rather than an expression.  The given
@@ -3237,10 +3252,16 @@ A student is asked to enter a function
 	on equations that are near zero for most values of the input; this can often be overcome by changing the $domain<br/>
 	"toconst": Specifies that the answer provided by the student is allowed to differ from the specified answer by a constant
 	for all inputs.  Appropriate for comparing antiderivatives.  This may fail on expressions that evaluate to very large
-	values or raise numbers to very large powers.<br/>
+    values or raise numbers to very large powers.<br/>
+    "scalarmult": Specifies that the answer provided by the student is allowed to differ from the specified answer by a 
+    scalar multiple.<br/>
 	"nosoln" or "nosolninf" adds a list radio buttons for "no solutions" and optionally "infinite solutions".
 	$ansprompt can override the default statements like this:
-	$ansprompt = "One function, f(x)=;No such function exists"
+    $ansprompt = "One function, f(x)=;No such function exists" <br/>
+    "sameform": requires the student's answer be in the "same form" as the correct answer. This means 
+        exactly the same, except for commutation of addition and multiplication, multiplication by 1,
+        implicit multiplication, and extra parentheses. (2x-3)(5-x) would be "safeform" as (-1x+5)(2*x-3), 
+        but 2/4x and 1/2x and 0.5x would not be "sameform". Use with caution.
 	</dd>
 <dt>$formatfeedbackon = true</dt>
 	<dd>Turns on "right answer, wrong format" feedback on the question</dd>
@@ -3380,7 +3401,11 @@ drawn line from the correct line.
 <dt>$answers = a string or array of strings describing the points or curves to be drawn </dt>
 	<dd>Curves:  "f(x)" like "x^2+3".<br/>
 	    Line segments or rays: "f(x),xmin,xmax", like "x+1,-3,2" or "x+1,-oo,3"<br/>
-	    Dots:  "x,y" for closed dots, "x,y,open" for open dots, like "2,3"</dd>
+        Dots:  "x,y" for closed dots, "x,y,open" for open dots, like "2,3"<br/>
+        See below for additional entry formats for other curves when using "twopoint" drawing.<br/>
+        When using twopoint drawing, you can preface an answer with "optional", like "optional,2,3", to 
+        indicate that drawing element is not required, but shouldn't mark down the score if present.
+    </dd>
 </dl>
 
 <p><strong>Recommended Variables</strong></p>
@@ -3469,8 +3494,15 @@ drawn line from the correct line.
 	<dd>Sets all-or-nothing grading.  If score &lt; $abstolerance, the student receives 0 for the question (note: score is
 	between 0 and 1).  Otherwise
 	the student will receive full credit.  Not set by default.</dd>
-<dt>$scoremethod = "takeanything" </dt>
-		<dd>When used, this will give full credit for any non-blank answer.  This might be of use with the freehand drawing option.</dd>
+<dt>$scoremethod = "takeanything", "direction", "relativelength"</dt>
+		<dd>When "takeanything" is used, this will give full credit for any non-blank answer.  This might be of use with the freehand drawing option.
+            <br>
+            "direction" and "relativelength" are only used for vectors.  
+            "direction" will score the initial point and direction for position vectors, but not length, and 
+              will only score direction for displacement vectors.
+            "relativelength" will score like "direction", but will also check that the drawn vectors have 
+              correct lengths relative to each other.
+        </dd>
 <dt>$readerlabel = string</dt>
     <dd>A string that will be used as a visually hidden label on the input box for screenreaders.</dd>
 <dt>$answerbox (In Question Text)</dt>
@@ -3629,7 +3661,7 @@ rather than just numbers, such as 1/3+sqrt(2)i.
 
 <p><strong>Required Variables</strong></p>
 <dl>
-<dt>$answers = a string containing a complex number or list of complex numbers </dt>
+<dt>$answer = a string containing a complex number or list of complex numbers </dt>
   <dd>Defines the answer.  Example: $answer="3+2i", $answer="2/3+1/3i".  The answer <em>must</em> be given in
   a + bi format (so 2+3isqrt(2) or 5/2+i/3 will not work)</dd>
 </dl>

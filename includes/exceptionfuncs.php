@@ -137,13 +137,18 @@ class ExceptionFuncs {
 	public function getCanUseAssessException($exception, $adata, $limit=false, $canuseifunblocked=false) {
 		$now = time();
 		$canuselatepass = false;
-		$canundolatepass = false;
+        $canundolatepass = false;
+        
+        if (isset($adata['original_enddate'])) {
+            // exception already applied. For calculations here we want to use the original enddate
+            $adata['enddate'] = $adata['original_enddate'];
+        }
 
 		$useexception = ($exception!==null && $exception!==false); //use by default
 		if ($exception!==null && $exception!==false && !empty($exception[3])) {
 			//is LTI-set - use the exception
 
-		} else if ($exception!==null && $exception[2]>0 && ($adata['enddate']>$exception[1] || $exception[1]>$this->courseenddate)) {
+		} else if ($exception!==null && $exception[2]>0 && $exception[0]>=$adata['startdate'] && ($adata['enddate']>$exception[1] || $exception[1]>$this->courseenddate)) {
 			//if latepass and assessment enddate is later than exception enddate, skip exception
 			//or, if latepass and exception would put it past the course end date, skip exception
 			$useexception = false;
@@ -165,7 +170,7 @@ class ExceptionFuncs {
 					$latepasscnt = $exception[2];
 				} else {
 					$latepasscnt = max(0,round(($exception[1] - $adata['enddate'])/($this->latepasshrs*3600)));
-				}
+                }
 				//use exception due date for determining canuselatepass
 				$adata['enddate'] = $exception[1];
 			} else {
@@ -175,12 +180,12 @@ class ExceptionFuncs {
 				} else {
 					$latepasscnt = 0;
 				}
-			}
+            }
 			if ($canuseifunblocked) {
 				$canuselatepass = $this->getLatePassBlockedByView($adata, $latepasscnt);
 				return array($useexception, $canuselatepass);
 			} else {
-				$canuselatepass = $this->getCanUseAssessLatePass($adata, $latepasscnt);
+                $canuselatepass = $this->getCanUseAssessLatePass($adata, $latepasscnt);
 				return array($useexception, $canundolatepass, $canuselatepass);
 			}
 		} else {
@@ -233,7 +238,8 @@ class ExceptionFuncs {
 		removed from below:
 			 && !in_array($adata['id'],$this->timelimitup)
 		*/
-		//**FIX/check
+        //**FIX/check
+
 		if ($adata['allowlate']%10==1) {
 			$latepassesAllowed = 10000000;  //unlimited
 		} else {

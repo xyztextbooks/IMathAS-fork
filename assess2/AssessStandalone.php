@@ -141,7 +141,7 @@ class AssessStandalone {
       $seqPartDone = array();
       if (!empty($this->state['rawscores'][$qn])) {
         foreach ($this->state['rawscores'][$qn] as $pn=>$sc) {
-            if ($hidescoremarkers) {
+            if ($hidescoremarkers || $sc == -2) {
                 $seqPartDone[$pn] = ($this->state['partattemptn'][$qn][$pn] > 0);
             } else if ($maxtries > 0 &&
               $this->state['partattemptn'][$qn][$pn] >= $maxtries
@@ -291,7 +291,7 @@ class AssessStandalone {
 
     foreach ($partla as $k=>$v) {
       if ($parts_to_score === true || !empty($parts_to_score[$k])) {
-        if (!isset($this->state['partattemptn'][$qn])) {
+        if (empty($this->state['partattemptn'][$qn])) {
           $this->state['partattemptn'][$qn] = array($k=>1);
         } else {
           $this->state['partattemptn'][$qn][$k]++;

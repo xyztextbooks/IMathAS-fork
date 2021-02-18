@@ -260,7 +260,7 @@ if (isset($_GET['frame_id'])) {
 }
 if (isset($_GET['theme'])) {
     $theme = preg_replace('/\W/', '', $_GET['theme']);
-    $_SESSION['coursetheme'] = $theme . '.css';
+    $coursetheme = $theme . '.css';
 }
 
 $lastupdate = '20200422';
@@ -277,7 +277,7 @@ if (!empty($CFG['assess2-use-vue-dev'])) {
     $placeinhead .= '<script src="' . $staticroot . '/mathquill/mqeditor.js?v=041920" type="text/javascript"></script>';
     $placeinhead .= '<script src="' . $staticroot . '/mathquill/mqedlayout.js?v=041920" type="text/javascript"></script>';
 } else {
-    $placeinhead .= '<script src="' . $staticroot . '/javascript/assess2_min.js?v=052920" type="text/javascript"></script>';
+    $placeinhead .= '<script src="' . $staticroot . '/javascript/assess2_min.js?v=111520" type="text/javascript"></script>';
 }
 
 $placeinhead .= '<script src="' . $staticroot . '/javascript/assess2supp.js" type="text/javascript"></script>';

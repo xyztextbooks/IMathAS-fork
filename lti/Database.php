@@ -115,7 +115,7 @@ class Imathas_LTI_Database implements LTI\Database
      * @param  string           $client_id
      * @return LTI_Registration
      */
-    public function find_registration_by_issuer(string $iss, ?string $client_id): LTI\LTI_Registration
+    public function find_registration_by_issuer(string $iss, ?string $client_id): ?LTI\LTI_Registration
     {
         if (empty($client_id)) {
             if (isset($_GET['u'])) {
@@ -134,7 +134,7 @@ class Imathas_LTI_Database implements LTI\Database
         }
         $row = $stm->fetch(PDO::FETCH_ASSOC);
         if ($row === false || $row === null) {
-            return false;
+            return null;
         }
         return LTI\LTI_Registration::new ()
             ->set_auth_login_url($row['auth_login_url'])
@@ -274,16 +274,21 @@ class Imathas_LTI_Database implements LTI\Database
 
     /**
      * Get local user id
-     * @param  string $ltiuserid
-     * @param  int $platform_id
-     * @param  false|array $migration_claim
+     * @param  LTI_Message_Launch $launch
      * @return false|int local userid
      */
-    public function get_local_userid(string $ltiuserid, int $platform_id, $migration_claim=false)
+    public function get_local_userid(LTI\LTI_Message_Launch $launch)
     {
+        $ltiuserid = $launch->get_platform_user_id();
+        $platform_id = $launch->get_platform_id();
+
         $stm = $this->dbh->prepare('SELECT userid FROM imas_ltiusers WHERE ltiuserid=? AND org=?');
         $stm->execute(array($ltiuserid, 'LTI13-' . $platform_id));
         $userid = $stm->fetchColumn(0);
+        if ($userid === false) {
+            $contextid = $launch->get_platform_context_id();
+            $migration_claim = $launch->get_migration_claim();
+        }
         if ($userid === false && 
             !empty($migration_claim) && 
             $this->verify_migration_claim($migration_claim)
@@ -301,6 +306,37 @@ class Imathas_LTI_Database implements LTI\Database
                 // found one; create a new ltiusers record using new ltiuserd/platformid
                 $this->create_lti_user($userid, $ltiuserid, $platform_id);
             }
+        } else if ($userid === false && $contextid != '') {
+            // look to see if we already have a user record with the same context id
+            // from an LTI 1.1 connection
+            $groups = $this->get_groups($platform_id, $launch->get_deployment_id());
+            if (count($groups)==0) {
+                return false;
+            }
+            $groups = array_column($groups, 'id');
+            // find old course connections using same contextid
+            $query = 'SELECT ilc.org,iu.groupid FROM imas_lti_courses AS ilc 
+                JOIN imas_courses AS ic ON ic.id=ilc.courseid 
+                JOIN imas_users AS iu ON ic.ownerid=iu.id WHERE ilc.contextid=?';
+            $stm = $this->dbh->prepare($query);
+            $stm->execute(array($contextid));
+            $qarr = array($ltiuserid);
+            while ($row = $stm->fetch(PDO::FETCH_ASSOC)) {
+                if (in_array($row['groupid'], $groups)) { // check course is in right group
+                    $key = explode(':', $row['org'])[0];
+                    $qarr[] = $key.':%';
+                }
+            }
+            if (count($qarr)==2) { // only use if one matching association
+                $stm = $this->dbh->prepare('SELECT userid FROM imas_ltiusers WHERE ltiuserid=? AND org LIKE ?');
+                $stm->execute($qarr);
+                $userid = $stm->fetchColumn(0);
+                if ($userid !== false) {
+                    // found one; create a new ltiusers record using new ltiuserd/platformid
+                    $this->create_lti_user($userid, $ltiuserid, $platform_id);
+                }
+            }
+            
         }
         return $userid;
     }
@@ -345,8 +381,12 @@ class Imathas_LTI_Database implements LTI\Database
             $stm->execute(array($userid, $localcourse->get_courseid()));
             $row = $stm->fetch(PDO::FETCH_ASSOC);
             if ($row === false || $row === null) {
-                $stm = $this->dbh->prepare('INSERT INTO imas_students (userid,courseid,section,lticourseid) VALUES (?,?,?,?)');
-                $stm->execute(array($userid, $localcourse->get_courseid(), $section, $localcourse->get_id()));
+                $stm = $this->dbh->prepare("SELECT deflatepass FROM imas_courses WHERE id=:id");
+                $stm->execute(array(':id'=>$localcourse->get_courseid()));
+                $deflatepass = $stm->fetchColumn(0);
+
+                $stm = $this->dbh->prepare('INSERT INTO imas_students (userid,courseid,section,latepass,lticourseid) VALUES (?,?,?,?,?)');
+                $stm->execute(array($userid, $localcourse->get_courseid(), $section, $deflatepass, $localcourse->get_id()));
             } else if ($row['lticourseid'] !== $localcourse->get_id()) {
                 $stm = $this->dbh->prepare('UPDATE imas_students SET lticourseid=? WHERE id=?');
                 $stm->execute(array($localcourse->get_id(), $row['id']));
@@ -382,12 +422,13 @@ class Imathas_LTI_Database implements LTI\Database
     /**
      * Get local user course id
      * @param  string $contextid
-     * @param  int $platform_id
-     * @param  false|array $migration_claim
+     * @param  LTI_Message_Launch $launch
      * @return null|LTI_Localcourse local course info
      */
-    public function get_local_course(string $contextid, int $platform_id, $migration_claim=false): ?LTI\LTI_Localcourse
+    public function get_local_course(string $contextid, LTI\LTI_Message_Launch $launch): ?LTI\LTI_Localcourse
     {
+        $platform_id = $launch->get_platform_id();
+
         $query = 'SELECT ilc.id,ilc.courseid,ilc.copiedfrom,ic.UIver,ic.dates_by_lti FROM
             imas_lti_courses AS ilc JOIN imas_courses AS ic ON ilc.courseid=ic.id
             WHERE ilc.contextid=? AND ilc.org=?';
@@ -395,6 +436,7 @@ class Imathas_LTI_Database implements LTI\Database
         $stm->execute(array($contextid, 'LTI13-' . $platform_id));
         $row = $stm->fetch(PDO::FETCH_ASSOC);
         if ($row === false || $row === null) {
+            $migration_claim = $launch->get_migration_claim();
             if (!empty($migration_claim) && $this->verify_migration_claim($migration_claim)) {
                 if (isset($migration_claim['context_id'])) {
                     $oldcontextid = $migration_claim['context_id'];
@@ -402,7 +444,7 @@ class Imathas_LTI_Database implements LTI\Database
                     $oldcontextid = $contextid;
                 }
                 $oldkey = $migration_claim['oauth_consumer_key'];
-                $query = 'SELECT courseid,copiedfrom,contextlabel FROM imas_ltiusers 
+                $query = 'SELECT courseid,copiedfrom,contextlabel FROM imas_lti_courses 
                     WHERE contextid=? AND org LIKE ?';
                 $stm = $this->dbh->prepare($query);
                 $stm->execute(array($oldcontextid, $oldkey.':%'));
@@ -414,6 +456,40 @@ class Imathas_LTI_Database implements LTI\Database
                     $localcourse = LTI\LTI_Localcourse::new()
                         ->set_courseid($row['courseid'])
                         ->set_copiedfrom($row['copiedfrom'])
+                        ->set_id($newlticourseid);
+                    return $localcourse;
+                }
+            } else if ($contextid != '') {
+                // look to see if we already have a user record with the same context id
+                // from an LTI 1.1 connection
+                $groups = $this->get_groups($platform_id, $launch->get_deployment_id());
+                if (count($groups)==0) {
+                    return null;
+                }
+                $groups = array_column($groups, 'id');
+                // find old course connections using same contextid
+                $query = 'SELECT ilc.courseid,ilc.copiedfrom,ilc.contextlabel,iu.groupid FROM imas_lti_courses AS ilc 
+                    JOIN imas_courses AS ic ON ic.id=ilc.courseid 
+                    JOIN imas_users AS iu ON ic.ownerid=iu.id WHERE ilc.contextid=?';
+                $stm = $this->dbh->prepare($query);
+                $stm->execute(array($contextid));
+                $foundrow = false;
+                while ($row = $stm->fetch(PDO::FETCH_ASSOC)) {
+                    if (in_array($row['groupid'], $groups)) { // check course is in right group
+                        if ($foundrow === false) {
+                            $foundrow = $row;
+                        } else { // more than one; bail
+                            return null;
+                        }
+                    }
+                }
+                if ($foundrow !== false) {
+                    // found one; create a new lti_course record using new contextid/platformid
+                    $newlticourseid = $this->add_lti_course($contextid, $platform_id, 
+                        $foundrow['courseid'], $foundrow['contextlabel'], $foundrow['copiedfrom']);
+                    $localcourse = LTI\LTI_Localcourse::new()
+                        ->set_courseid($foundrow['courseid'])
+                        ->set_copiedfrom($foundrow['copiedfrom'])
                         ->set_id($newlticourseid);
                     return $localcourse;
                 }
@@ -473,18 +549,18 @@ class Imathas_LTI_Database implements LTI\Database
 
     /**
      * Get groups associated with deployment
-     * @param  string $iss        issuer
+     * @param  int $platform_id  platform id
      * @param  string $deployment LMS provided deployment string
      * @return array  of groups, with indices id and name
      */
-    public function get_groups(string $iss, string $deployment): array
+    public function get_groups(int $platform_id, string $deployment): array
     {
         $query = 'SELECT ig.id,ig.name FROM imas_groups AS ig
-      JOIN imas_groupassoc AS iga ON ig.id=iga.groupid
+      JOIN imas_lti_groupassoc AS iga ON ig.id=iga.groupid
       JOIN imas_lti_deployments AS ild ON ild.id=iga.deploymentid
-      WHERE ild.issuer=? AND ild.deployment=?';
+      WHERE ild.platform=? AND ild.deployment=?';
         $stm = $this->dbh->prepare($query);
-        $stm->execute(array($iss, $deployment));
+        $stm->execute(array($platform_id, $deployment));
         return $stm->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -517,9 +593,26 @@ class Imathas_LTI_Database implements LTI\Database
     }
 
     /**
+     * Get all courses user is teacher for
+     * 
+     * @param int $userid 
+     * @return array of id=>name
+     */
+    public function get_all_courses(int $userid): array 
+    {
+        $query = "SELECT DISTINCT ic.id,ic.name FROM imas_courses AS ic JOIN imas_teachers AS imt ON ic.id=imt.courseid ";
+        $query .= "AND imt.userid=? WHERE ic.available<4 ORDER BY ic.name";
+        $stm = $this->dbh->prepare($query);
+        $stm->execute([$userid]);
+        $courses = [];
+        while ($row = $stm->fetch(PDO::FETCH_NUM)) {
+            $courses[$row[0]] = $row[1];
+        }
+        return $courses;
+    }
+
+    /**
      * Get courses we might want to copy or associate with
-     *
-     * TODO: extend with hooks to handle initial launches to other item types
      *
      * @param  array $target    should have 'refcid' and 'refaid' defined
      * @param  int   $lastcopied last copied course id
@@ -1038,6 +1131,10 @@ class Imathas_LTI_Database implements LTI\Database
             $section = $data['context']['label'];
         }
 
+        $stm = $this->dbh->prepare("SELECT deflatepass FROM imas_courses WHERE id=:id");
+        $stm->execute(array(':id'=>$localcourse->get_courseid()));
+        $deflatepass = $stm->fetchColumn(0);
+
         $query = 'SELECT iu.FirstName,iu.LastName,ilu.ltiuserid,istu.id FROM
             imas_users AS iu JOIN imas_ltiusers AS ilu ON ilu.userid=iu.id AND ilu.org=?
             JOIN imas_students AS istu ON istu.userid=iu.id WHERE istu.courseid=?';
@@ -1084,8 +1181,8 @@ class Imathas_LTI_Database implements LTI\Database
                     }
                 }
                 // enroll in course
-                $stm = $this->dbh->prepare('INSERT INTO imas_students (userid,courseid,section,lticourseid) VALUES (?,?,?,?)');
-                $stm->execute(array($localuserid, $localcourse->get_courseid(), $section, $localcourse->get_id()));
+                $stm = $this->dbh->prepare('INSERT INTO imas_students (userid,courseid,section,latepass,lticourseid) VALUES (?,?,?,?,?)');
+                $stm->execute(array($localuserid, $localcourse->get_courseid(), $section, $deflatepass, $localcourse->get_id()));
 
                 $enrollcnt++;
             } else {

@@ -74,7 +74,7 @@ class FunctionExpressionScorePart implements ScorePart
 
         $correct = true;
 
-        $givenans = str_replace(',','', $givenans);
+        $givenans = preg_replace('/(\d)\s*,\s*(?=\d{3}(\D|\b))/','$1',$givenans);
 
         if (!isset($variables)) { $variables = "x";}
         $variables = array_map('trim',explode(",",$variables));
@@ -94,10 +94,6 @@ class FunctionExpressionScorePart implements ScorePart
             }
         }
 
-        if (($v = array_search('E', $variables))!==false) {
-            $variables[$v] = 'varE';
-            $answer = str_replace('E','varE',$answer);
-        }
         if (isset($domain)) {
             $fromto = array_map('trim',explode(",",$domain));
         } else {
@@ -139,8 +135,8 @@ class FunctionExpressionScorePart implements ScorePart
         if (count($ofunc)>0) {
             usort($ofunc,'lensort');
             $flist = implode("|",$ofunc);
-            $answer = preg_replace('/('.$flist.')\(/',"$1*sin($1+",$answer);
-            $givenans = preg_replace('/('.$flist.')\(/',"$1*sin($1+",$givenans);
+            $answer = preg_replace('/('.$flist.')\(/',"funcvar[$1](",$answer);
+            $givenans = preg_replace('/('.$flist.')\(/',"funcvar[$1](",$givenans);
         }
         $vlist = implode(",",$variables);
 
@@ -307,7 +303,7 @@ class FunctionExpressionScorePart implements ScorePart
                 $realans = $answerfunc->evaluateQuiet($varvals);
                 //echo "$answer, real: $realans, my: {$myans[$i]},rel: ". (abs($myans[$i]-$realans)/abs($realans))  ."<br/>";
                 if (isNaN($realans)) {$cntnan++; continue;} //avoid NaN problems
-                if (in_array('equation',$ansformats) || in_array('inequality',$ansformats)) {  //if equation, store ratios
+                if (in_array('equation',$ansformats) || in_array('inequality',$ansformats) || in_array('scalarmult',$ansformats)) {  //if equation, store ratios
                     if (isNaN($givenansvals[$i])) {
                         $stunan++;
                     } elseif (abs($realans)>.000001 && is_numeric($givenansvals[$i])) {
@@ -342,7 +338,7 @@ class FunctionExpressionScorePart implements ScorePart
             if ($stunan>1) { //if more than 1 student NaN response
                 $correct = false; continue;
             }
-            if (in_array('equation',$ansformats) || in_array('inequality',$ansformats)) {
+            if (in_array('equation',$ansformats) || in_array('inequality',$ansformats) || in_array('scalarmult',$ansformats)) {
                 if ($cntbothzero>18) {
                     $correct = true;
                 } else if (count($ratios)>1) {
