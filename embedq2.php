@@ -183,7 +183,7 @@ if (isset($QS['showscored'])) {
         $overrides['showans'] = 0;
     }
 } else {
-    if (isset($QS['showans'])) {
+    if (isset($QS['showans']) && !empty($QS['auth'])) {
         $state['showans'] = $QS['showans'];
     } else {
         $state['showans'] = 0;
@@ -308,6 +308,7 @@ $placeinhead .= '<script type="text/javascript">
   var thisqn = '.$qn.';
   function sendresizemsg() {
    if(inIframe()){
+       console.log(document.body.scrollHeight + "," + document.body.offsetHeight + "," + document.getElementById("embedspacer").offsetHeight);
       var default_height = Math.max(
         document.body.scrollHeight, document.body.offsetHeight) + 20;
       var wrap_height = default_height - document.getElementById("embedspacer").offsetHeight;
@@ -334,9 +335,13 @@ $placeinhead .= '<script type="text/javascript">
   if (mathRenderer == "Katex") {
      window.katexDoneCallback = sendresizemsg;
   } else if (typeof MathJax != "undefined") {
-      MathJax.Hub.Queue(function () {
-          sendresizemsg();
-      });
+    if (MathJax.startup) {
+        MathJax.startup.promise = MathJax.startup.promise.then(sendLTIresizemsg);
+    } else if (MathJax.Hub) {
+        MathJax.Hub.Queue(function () {
+            sendresizemsg();
+        });
+    } 
   } else {
       $(function() {
           sendresizemsg();
@@ -344,7 +349,7 @@ $placeinhead .= '<script type="text/javascript">
   }
   </script>
   <style>
-  body { margin: 0;}
+  body { margin: 0; overflow-y: hidden;}
   .question {
       margin-top: 0 !important;
   }
@@ -358,14 +363,15 @@ $placeinhead .= '<script type="text/javascript">
       height: 0 !important;
   }
   </style>';
-if ($_SESSION['mathdisp'] == 1 || $_SESSION['mathdisp'] == 3) {
+  if ($_SESSION['mathdisp'] == 1 || $_SESSION['mathdisp'] == 3) {
     //in case MathJax isn't loaded yet
     $placeinhead .= '<script type="text/x-mathjax-config">
       MathJax.Hub.Queue(function () {
           sendresizemsg();
       });
-  </script>';
-}
+    </script>';
+  }
+
 $flexwidth = true; //tells header to use non _fw stylesheet
 $nologo = true;
 require "./header.php";
@@ -390,6 +396,7 @@ echo '</div>';
 echo '<input type=hidden name=toscoreqn id=toscoreqn value=""/>';
 echo '<input type=hidden name=state id=state value="'.Sanitize::encodeStringForDisplay(JWT::encode($a2->getState(), $statesecret)).'" />';
 
+echo '<div class="mce-content-body" style="text-align:right;font-size:70%;margin-right:5px;"><a style="color:#666" target="_blank" href="course/showlicense.php?id='.$qsid.'">'._('License').'</a></div>';
 echo '<script>
     $(function() {
         showandinit('.$qn.','.json_encode($disp).');

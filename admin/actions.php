@@ -59,9 +59,9 @@ switch($_POST['action']) {
 		if ($_POST['newrights']>$myrights) {
 			$_POST['newrights'] = $myrights;
 		}
-		$stm = $DBH->prepare("SELECT rights,groupid FROM imas_users WHERE id=:id");
+		$stm = $DBH->prepare("SELECT rights,groupid,jsondata FROM imas_users WHERE id=:id");
 		$stm->execute(array(':id'=>$_GET['id']));
-		list($oldrights,$oldgroupid) = $stm->fetch(PDO::FETCH_NUM);
+		list($oldrights,$oldgroupid,$oldjsondata) = $stm->fetch(PDO::FETCH_NUM);
 		if ($row === false) {
 			echo _("invalid id");
 			exit;
@@ -133,6 +133,20 @@ switch($_POST['action']) {
 		if (isset($_POST['doresetpw'])) {
 			$arr[':password'] = $hashpw;
 		}
+        $chgJsondata = false;
+        if (($myrights >= 75 || ($myspecialrights&48)>0) && isset($CFG['GEN']['COPPA'])) {
+            $oldjsondata = json_decode($oldjsondata, true);
+            if ($oldjsondata === null) {
+                $oldjsondata = [];
+            }
+            if (empty($_POST['over13'])) {
+                $oldjsondata['under13'] = 1;
+            } else {
+                unset($oldjsondata['under13']);
+            }
+            $chgJsondata = true;
+            $arr[':jsondata'] = json_encode($oldjsondata);
+        }
 
 		if ($myrights == 100 || ($myspecialrights&32)==32) { //update library groupids
 			if ($_POST['group']==-1) {
@@ -168,6 +182,9 @@ switch($_POST['action']) {
 			if ($chgSID) {
 				$query .= ',SID=:SID';
 			}
+            if ($chgJsondata) {
+                $query .= ',jsondata=:jsondata';
+            }
 			if (isset($_POST['doresetpw'])) {
 				$query .= ',password=:password,forcepwreset=1';
 			}
@@ -193,6 +210,9 @@ switch($_POST['action']) {
 			if ($chgSID) {
 				$query .= ',SID=:SID';
 			}
+            if ($chgJsondata) {
+                $query .= ',jsondata=:jsondata';
+            }
 			if (isset($_POST['doresetpw'])) {
 				$query .= ',password=:password';
 			}
@@ -202,15 +222,23 @@ switch($_POST['action']) {
 		}
 
 		//if student being promoted, enroll in teacher enroll courses
-		if ($oldrights<=10 && $_POST['newrights']>=20 && isset($CFG['GEN']['enrollonnewinstructor'])) {
-			$valbits = array();
-			$valvals = array();
-			foreach ($CFG['GEN']['enrollonnewinstructor'] as $ncid) {
-				$valbits[] = "(?,?)";
-				array_push($valvals, $_GET['id'], $ncid);
-			}
-			$stm = $DBH->prepare("INSERT INTO imas_students (userid,courseid) VALUES ".implode(',',$valbits));
-			$stm->execute($valvals);
+		if ($oldrights<=10 && $_POST['newrights']>=20) {
+            if (isset($CFG['GEN']['enrollonnewinstructor'])) {
+                $stm = $DBH->prepare("SELECT courseid FROM imas_students WHERE userid=?");
+                $stm->execute([$_GET['id']]);
+                $existingEnroll = $stm->fetchAll(PDO::FETCH_COLUMN, 0);
+                $toEnroll = array_diff($CFG['GEN']['enrollonnewinstructor'], $existingEnroll);
+                if (count($toEnroll) > 0) {
+                    $valbits = array();
+                    $valvals = array();
+                    foreach ($toEnroll as $ncid) {
+                        $valbits[] = "(?,?)";
+                        array_push($valvals, $_GET['id'], $ncid);
+                    }
+                    $stm = $DBH->prepare("INSERT INTO imas_students (userid,courseid) VALUES ".implode(',',$valbits));
+                    $stm->execute($valvals);
+                }
+            }
 
 
 			//log new account
@@ -431,7 +459,13 @@ switch($_POST['action']) {
 		if (isset($_POST['specialrights64']) && $myrights==100) {
 			$specialrights += 64;
 		}
-		$stm = $DBH->prepare("INSERT INTO imas_users (SID,password,FirstName,LastName,rights,email,groupid,homelayout,specialrights) VALUES (:SID, :password, :FirstName, :LastName, :rights, :email, :groupid, :homelayout, :specialrights);");
+        $jsondata = [];
+        if (($myrights >= 75 || ($myspecialrights&48)>0) && isset($CFG['GEN']['COPPA'])) {
+            if (empty($_POST['over13'])) {
+                $jsondata['under13'] = 1;
+            }
+        }
+		$stm = $DBH->prepare("INSERT INTO imas_users (SID,password,FirstName,LastName,rights,email,groupid,homelayout,specialrights,jsondata) VALUES (:SID, :password, :FirstName, :LastName, :rights, :email, :groupid, :homelayout, :specialrights, :jsondata);");
 		$stm->execute(array(':SID'=>$_POST['SID'],
 			':password'=>$md5pw,
 			':FirstName'=>Sanitize::stripHtmlTags($_POST['firstname']),
@@ -440,7 +474,8 @@ switch($_POST['action']) {
 			':email'=>Sanitize::emailAddress($_POST['email']),
 			':groupid'=>$newgroup,
 			':homelayout'=>$homelayout,
-			':specialrights'=>$specialrights));
+			':specialrights'=>$specialrights,
+            ':jsondata'=>json_encode($jsondata)));
 		$newuserid = $DBH->lastInsertId();
 		if (isset($CFG['GEN']['enrollonnewinstructor']) && $_POST['newrights']>=20) {
 			$valbits = array();
@@ -619,8 +654,12 @@ switch($_POST['action']) {
 		if (!isset($CFG['coursebrowserRightsToPromote'])) {
 			$CFG['coursebrowserRightsToPromote'] = 40;
 		}
-		$updateJsonData = false;
-		$jsondata = json_decode($old_course_settings['jsondata'], true);
+        $updateJsonData = false;
+        if (isset($old_course_settings['jsondata'])) {
+            $jsondata = json_decode($old_course_settings['jsondata'], true);
+        } else {
+            $jsondata = null;
+        }
 		if ($jsondata===null) {
 			$jsondata = array();
 		}
@@ -678,7 +717,7 @@ switch($_POST['action']) {
 		} else {
 			$enddate = parsedatetime($_POST['edate'],'11:59pm',2000000000);
 		}
-		$_POST['ltisecret'] = trim($_POST['ltisecret']);
+		$_POST['ltisecret'] = trim($_POST['ltisecret'] ?? '');
 		if (isset($_POST['setdatesbylti']) && $_POST['setdatesbylti']==1) {
 			$setdatesbylti = 1;
 		} else {
@@ -1269,7 +1308,7 @@ switch($_POST['action']) {
 			//check that code is valid and not a replay
 			if ($MFA->verifyCode($mfadata['secret'], $_POST['mfatoken']) &&
 			   ($_POST['mfatoken'] != $mfadata['last'] || time() - $mfadata['laston'] > 600)) {
-				$_SESSION['mfaverified'] = true;
+				$_SESSION['mfaadminverified'] = true;
 				$mfadata['last'] = $_POST['mfatoken'];
 				$mfadata['laston'] = time();
 				if (isset($_POST['mfatrust'])) {

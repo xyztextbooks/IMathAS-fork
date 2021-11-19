@@ -154,6 +154,15 @@ class QuestionHtmlGenerator
                 $doShowAnswer = true;
             }
         }
+        if ($quesData['qtype'] == "multipart") {
+            // if multipart only has one part, need to re-array scoreiscorrect
+            if (isset($scoreiscorrect[$thisq]) && !is_array($scoreiscorrect[$thisq])) {
+                $scoreiscorrect[$thisq] = array($scoreiscorrect[$thisq]);
+            }
+            if (isset($scorenonzero[$thisq]) && !is_array($scorenonzero[$thisq])) {
+                $scorenonzero[$thisq] = array($scorenonzero[$thisq]);
+            }
+        }
         if ($attemptn == 0) {
           $GLOBALS['assess2-curq-iscorrect'] = -1;
         } else {
@@ -162,7 +171,7 @@ class QuestionHtmlGenerator
           } else {
             $GLOBALS['assess2-curq-iscorrect'] = array();
             foreach ($partattemptn as $kidx=>$iidx) {
-              if ($iidx==0) {
+              if ($iidx==0 || !isset($scoreiscorrect[$thisq][$kidx])) {
                 $GLOBALS['assess2-curq-iscorrect'][$kidx] = -1;
               } else {
                 $GLOBALS['assess2-curq-iscorrect'][$kidx] = ($scoreiscorrect[$thisq][$kidx] < 0 ? -1 : ($scoreiscorrect[$thisq][$kidx]==1 ? 1 : 0));
@@ -179,6 +188,7 @@ class QuestionHtmlGenerator
         }
 
         // Use this question's RNG seed.
+        $currentseed = $this->questionParams->getQuestionSeed();
         $this->randWrapper->srand($this->questionParams->getQuestionSeed());
 
         // Eval the question writer's question code.
@@ -315,7 +325,7 @@ class QuestionHtmlGenerator
             }
 
             // Get the answers to all parts of this question.
-            $lastAnswersAllParts = $stuanswers[$thisq];
+            $lastAnswersAllParts = $stuanswers[$thisq] ?? [];
             if (isset($autosaves[$thisq])) {
               if (is_array($autosaves[$thisq])) {
                 foreach ($autosaves[$thisq] as $iidx=>$kidx) {
@@ -416,9 +426,9 @@ class QuestionHtmlGenerator
                     ->setQuestionPartNumber($atIdx)
                     ->setQuestionPartCount(count($anstypes))
                     ->setAssessmentId($this->questionParams->getAssessmentId())
-                    ->setStudentLastAnswers($lastAnswersAllParts[$atIdx])
+                    ->setStudentLastAnswers($lastAnswersAllParts[$atIdx] ?? '')
                     ->setColorboxKeyword($questionColor)
-                    ->setCorrectAnswerWrongFormat($correctAnswerWrongFormat[$atIdx]);
+                    ->setCorrectAnswerWrongFormat($correctAnswerWrongFormat[$atIdx] ?? false);
 
                 try {
                   $answerBoxGenerator = AnswerBoxFactory::getAnswerBoxGenerator($answerBoxParams);
@@ -479,7 +489,7 @@ class QuestionHtmlGenerator
             $questionColor = $this->getAnswerColorFromRawScore(
                 $this->questionParams->getLastRawScores(), 0, 1);
 
-            $lastAnswer = $stuanswers[$thisq];
+            $lastAnswer = $stuanswers[$thisq] ?? '';
             if (isset($autosaves[$thisq])) {
               $lastAnswer = $autosaves[$thisq];
             }
@@ -504,7 +514,7 @@ class QuestionHtmlGenerator
                 ->setIsMultiPartQuestion(false)
                 ->setStudentLastAnswers($lastAnswer)
                 ->setColorboxKeyword($questionColor)
-                ->setCorrectAnswerWrongFormat($correctAnswerWrongFormat[0]);
+                ->setCorrectAnswerWrongFormat($correctAnswerWrongFormat[0] ?? false);
 
             $answerBoxGenerator = AnswerBoxFactory::getAnswerBoxGenerator($answerBoxParams);
             $answerBoxGenerator->generate();
@@ -537,7 +547,7 @@ class QuestionHtmlGenerator
 
         if (isset($hints) && is_array($hints) && count($hints) > 0 && $showHints) {
             // Eval'd question writer code expects this to be "$hintloc".
-            $hintloc = $this->getHintText($hints);
+            $hintloc = $this->getHintText($hints, $hintlabel ?? '');
         }
 
         /*
@@ -747,7 +757,7 @@ class QuestionHtmlGenerator
           $sadiv .= '<div>'.$showanswerloc.'</div>';
         } else if (is_array($showanswerloc)) {
           foreach ($showanswerloc as $iidx => $saloc) {
-            if (($doShowAnswer || (is_array($doShowAnswerParts) && $doShowAnswerParts[$iidx])) &&
+            if (($doShowAnswer || (is_array($doShowAnswerParts) && !empty($doShowAnswerParts[$iidx]))) &&
               strpos($toevalqtxt,'$showanswerloc['.$iidx.']')===false
             ) {
               $sadiv .= '<div>'.$saloc.'</div>';
@@ -873,9 +883,10 @@ class QuestionHtmlGenerator
      * Get hint text for question and/or individual parts.
      *
      * @param array $hints As provided by the question writer.
+     * @param string $hintlabel 
      * @return string|array The hint text.
      */
-    private function getHintText(array $hints)
+    private function getHintText(array $hints, string $hintlabel)
     {
         $qdata = $this->questionParams->getQuestionData();
         $attemptn = $this->questionParams->getStudentAttemptNumber();
@@ -898,6 +909,9 @@ class QuestionHtmlGenerator
                     $allcorrect = true;
                     $showfor = array_map('intval', $hintpart[$lastkey][1]);
                     foreach ($showfor as $subpn) {
+                        if (!isset($partattemptn[$subpn])) {
+                            $partattemptn[$subpn] = 0;
+                        }
                         if (isset($scoreiscorrect) && $scoreiscorrect[$thisq][$subpn] == 1) {
                            continue; // don't consider correct
                         } else {
@@ -919,6 +933,9 @@ class QuestionHtmlGenerator
                     if (isset($scoreiscorrect) && $scoreiscorrect[$thisq][$iidx] == 1) {
                         continue;
                     }
+                    if (!isset($partattemptn[$iidx])) {
+                        $partattemptn[$iidx] = 0;
+                    }
                     if ($partattemptn[$iidx] > $lastkey) {
                         $usenum = $lastkey;
                     } else {
@@ -930,7 +947,7 @@ class QuestionHtmlGenerator
                         $hintloc[$iidx] = $hintpart[$usenum];
                     } else if (strpos($hintpart[$usenum], 'button"') !== false) {
                         $hintloc[$iidx] = "<p>{$hintpart[$usenum]}</p>\n";
-                    } else if (isset($hintlabel)) {
+                    } else if (!empty($hintlabel)) {
                         $hintloc[$iidx] = "<p>$hintlabel {$hintpart[$usenum]}</p>\n";
                     } else {
                         $hintloc[$iidx] = "<p><i>" . _('Hint:') . "</i> {$hintpart[$usenum]}</p>\n";
@@ -948,7 +965,7 @@ class QuestionHtmlGenerator
                     $hintloc = $hints[$usenum];
                 } else if (strpos($hints[$usenum], 'button"') !== false) {
                     $hintloc = "<p>{$hints[$usenum]}</p>\n";
-                } else if (isset($hintlabel)) {
+                } else if (!empty($hintlabel)) {
                     $hintloc = "<p>$hintlabel {$hints[$usenum]}</p>\n";
                 } else {
                     $hintloc = "<p><i>" . _('Hint:') . "</i> {$hints[$usenum]}</p>\n";
@@ -1107,7 +1124,7 @@ class QuestionHtmlGenerator
               }
             }
             if (!is_array($answerBoxes) && count($showanswerloc) < 2) { //not a multipart question
-                $showanswerloc = str_replace($qnidx . '-0"', $qnidx . '"', $showanswerloc[0]);
+                $showanswerloc = str_replace($qnidx . '-0"', $qnidx . '"', $showanswerloc[0] ?? '');
             }
         }
 

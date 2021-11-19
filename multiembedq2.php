@@ -130,11 +130,8 @@ $state['hidescoremarkers'] = !$state['showscoredonsubmit'];
 if (isset($QS['hidescoremarkers'])) {
     $state['hidescoremarkers'] = $QS['hidescoremarkers'];
 }
-if (isset($QS['showans'])) {
-    $state['showans'] = $QS['showans'];
-} else {
-    $state['showans'] = 0;
-}
+$state['showans'] = 0;
+
 if (isset($QS['allowregen'])) {
     $state['allowregen'] = $QS['allowregen'];
 } else {
@@ -315,9 +312,13 @@ $placeinhead .= '<script type="text/javascript">
   if (mathRenderer == "Katex") {
      window.katexDoneCallback = sendresizemsg;
   } else if (typeof MathJax != "undefined") {
-      MathJax.Hub.Queue(function () {
-          sendresizemsg();
-      });
+    if (MathJax.startup) {
+        MathJax.startup.promise = MathJax.startup.promise.then(sendLTIresizemsg);
+    } else if (MathJax.Hub) {
+        MathJax.Hub.Queue(function () {
+            sendresizemsg();
+        });
+    } 
   } else {
       $(function() {
           sendresizemsg();
@@ -336,14 +337,15 @@ $placeinhead .= '<script type="text/javascript">
       height: 0 !important;
   }
   </style>';
-if ($_SESSION['mathdisp'] == 1 || $_SESSION['mathdisp'] == 3) {
+if ($_SESSION['mathdisp']==1 || $_SESSION['mathdisp']==3) {
     //in case MathJax isn't loaded yet
     $placeinhead .= '<script type="text/x-mathjax-config">
-      MathJax.Hub.Queue(function () {
-          sendresizemsg();
-      });
-  </script>';
+        MathJax.Hub.Queue(function () {
+            sendresizemsg();
+        });
+        </script>';
 }
+
 $flexwidth = true; //tells header to use non _fw stylesheet
 $nologo = true;
 require "./header.php";
@@ -375,6 +377,9 @@ for ($qn=0; $qn < $numq; $qn++) {
 }
 echo '<input type=hidden name=toscoreqn id=toscoreqn value=""/>';
 echo '<input type=hidden name=state id=state value="'.Sanitize::encodeStringForDisplay(JWT::encode($a2->getState(), $statesecret)).'" />';
+
+echo '<div class="mce-content-body" style="text-align:right;font-size:70%;margin-right:5px;"><a style="color:#666" target="_blank" href="course/showlicense.php?id='.Sanitize::encodeUrlParam(implode('-', $QS['id'])).'">'._('License').'</a></div>';
+
 
 if ($state['jssubmit']) {
     echo '<div id="embedspacer" style="display:none;height:200px">&nbsp;</div>';
